@@ -17,6 +17,7 @@ class DonationItems(models.Model):
     )
     campaign_type = models.ForeignKey(CampaignType, on_delete=models.CASCADE, null=True)
     title = models.CharField(max_length=100, verbose_name='Title')
+    image = models.ImageField(verbose_name='Image',upload_to='uploads/', null=True, blank=True)
     description = models.TextField()
     goal_amount = models.IntegerField(verbose_name='Goal Amount')
     created_on = models.DateTimeField(auto_now_add=True, blank=True, null=True)

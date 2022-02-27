@@ -10,9 +10,8 @@ class CampaignTypesAdmin(admin.ModelAdmin):
 
 
 @admin.register(DonationItems)
-class DonationItemsAdmin(SummernoteModelAdmin):
-    list_display = ('title', 'goal_amount', 'end_date', 'currency', 'publish')
-    summernote_fields = ('description',)
+class DonationItemsAdmin(admin.ModelAdmin):
+    list_display = ('title', 'goal_amount', 'end_date', 'description', 'currency', 'publish',)
     list_filter = ('title',)
 
 
