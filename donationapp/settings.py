@@ -44,11 +44,13 @@ INSTALLED_APPS = [
     'campaign',
     'newsletter',
     'users',
+    'duas',
 
 ]
 
-INSTALLED_APPS += ('django_summernote', 'rest_framework', 'rest_framework_api_key', 'fcm_django',)
+INSTALLED_APPS += ('django_summernote', 'rest_framework', 'rest_framework_api_key', 'fcm_django', 'import_export')
 
+UNICODE_JSON = False
 
 FCM_DJANGO_SETTINGS = {
      # default: _('FCM Django')

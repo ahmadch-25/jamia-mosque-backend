@@ -10,18 +10,20 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .serializer import CampaignSerializer
-from .models import DonationItems, CampaignContribution
+from .models import DonationItems, CampaignContribution, ZakatNisab
 
 from intasend.utils import generate_keys
 from django.contrib.auth.models import User
 from firebase_admin.messaging import Message, Notification
 from fcm_django.models import FCMDevice
+from pyIslam.zakat import Zakat
 
 private_key = """-----BEGIN PRIVATE KEY-----
     MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCwhxnB5aZD6EqF....8laHwYTQdDbAlCGZB992YoHl
     -----END PRIVATE KEY-----"""
 token = "a8184850d012267e3d717491a2c99cbb3545efbbdc0bf1275291c492faff41a0"
 publishable_key = "ISPubKey_test_13a61255-5b3a-4342-964e-04e49616e8c0"
+zakat = Zakat()
 
 
 class CampaignListView(APIView):
@@ -34,14 +36,12 @@ class CampaignListView(APIView):
 
 
 def index(request):
-    device = FCMDevice.objects.all().first()
     # send_message parameters include: message, dry_run, app
-    device.send_message(Message(
-        data={
-            "Nick": "Mario",
-            "body": "great match!",
-            "Room": "PortugalVSDenmark"
-        },
+    FCMDevice.objects.send_message(Message(
+        notification=Notification(title="Payment Received",
+                                  body="Your payment of {} for Donation is Completed, Thank you".format(
+                                      10),
+                                  image="https://cdn3.iconfinder.com/data/icons/fintech-43/32/FINTECH_RAW_-_FILLED_FLAT-05-512.png"),
     ))
     return render(request, "index.html")
 
@@ -60,15 +60,27 @@ class GenratePaymentUrl(APIView):
         response = service.collect.checkout(
             phone_number=request_data["phone_number"],
             email=request_data["email"], amount=request_data["amount"], currency="KES",
-            comment="Fees"
-
-            ,
+            comment="Fees",
             first_name=request_data["first_name"], last_name=request_data["last_name"],
             api_ref=request_data["campaign_id"] + "_" + user.id
 
         )
         print(response)
         return Response({"message": "success", "error": False, "url": response["url"]}, status=status.HTTP_200_OK)
+
+
+class CalculateZakat(APIView):
+
+    def get(self, request):
+        currency = request.query_params.get('cur')
+        amount = request.query_params.get('amount')
+        zakat_nisab = ZakatNisab.objects.all().first()
+        if currency == "USD":
+            calculated_amount = zakat.calculate_zakat(amount=float(amount), nisab=zakat_nisab.nisab_in_usd)
+        else:
+            calculated_amount = zakat.calculate_zakat(amount=float(amount), nisab=zakat_nisab.nisab_in_kes)
+        return Response({"message": "success", "error": False, 'calculated_amount': calculated_amount},
+                        status=status.HTTP_200_OK)
 
 
 class ListenWebHook(APIView):

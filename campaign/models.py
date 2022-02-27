@@ -47,3 +47,17 @@ class CampaignContribution(models.Model):
     class Meta:
         verbose_name_plural = 'Contributions'
         ordering = ['-amount']
+
+
+class ZakatNisab(models.Model):
+    nisab_in_usd = models.FloatField(verbose_name='Nisab in USD')
+    nisab_in_kes = models.FloatField(verbose_name='Nisab in KES')
+    created_on = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+    updated_on = models.DateTimeField(auto_now=True, blank=True, null=True)
+
+    def __str__(self):
+        return str(self.nisab_in_usd) + "     -    " + str(self.nisab_in_kes)
+
+    class Meta:
+        verbose_name_plural = 'Zakat Nisab'
+        ordering = ['-updated_on']

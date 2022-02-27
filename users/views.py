@@ -10,7 +10,6 @@ from campaign.models import CampaignContribution
 from fcm_django.models import FCMDevice
 
 
-
 class UserRegister(APIView):
 
     def post(self, request):
@@ -29,9 +28,10 @@ class UserRegister(APIView):
         app_user = UserInfo(user=user, phone_number=user_data["phone_number"], device_token=user_data["device_token"])
         try:
             fcm_device = FCMDevice(user=user, name=user.first_name, active=True, device_id=user_data["phone_number"],
-                                   registration_id=user_data["device_token"],type='android')
+                                   registration_id=user_data["device_token"], type='android')
         except Exception as e:
             print(e)
+
         fcm_device.save()
         app_user.save()
         user = UserSerializer(user)
@@ -48,6 +48,9 @@ class UserLogin(APIView):
 
         user = User.objects.get(username=user_data["email"])
         if check_password(user_data["password"], user.password):
+            fcm_device = FCMDevice.objects.filter(user=user).first()
+            fcm_device.registration_id = user_data["device_token"]
+            fcm_device.save()
             user = UserSerializer(user)
             return Response({"message": "success", "error": False, "user": user.data}, status=status.HTTP_200_OK)
 
