@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
 class CampaignSerializer(serializers.ModelSerializer):
     class Meta:
         model = DonationItems
-        fields = ['id', 'campaign_type', 'title', 'currency', ]
+        fields = ['id', 'campaign_type', 'title', 'currency', 'image']
 
 
 class ContributionSerializer(serializers.ModelSerializer):

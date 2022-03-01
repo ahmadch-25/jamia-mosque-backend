@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.shortcuts import render
+from rest_framework.generics import UpdateAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import UserInfo
@@ -55,6 +56,30 @@ class UserLogin(APIView):
             return Response({"message": "success", "error": False, "user": user.data}, status=status.HTTP_200_OK)
 
         return Response({"message": "Password Not Correct !", "error": True}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class ChangePasswordView(APIView):
+    """
+    An endpoint for changing password.
+    """
+
+    def post(self, request, *args, **kwargs):
+        request_data = request.data
+        user = User.objects.get(email=request_data['email'])
+        # Check old password
+        if not user.check_password(request_data["old_password"]):
+            return Response({"message": "Wrong old password."}, status=status.HTTP_400_BAD_REQUEST)
+        # set_password also hashes the password that the user will get
+        user.set_password(request_data["new_password"])
+        user.save()
+        response = {
+            'status': 'success',
+            'code': status.HTTP_200_OK,
+            'message': 'Password updated successfully',
+            'data': [],
+        }
+
+        return Response(response)
 
 
 class UserUpdate(APIView):
