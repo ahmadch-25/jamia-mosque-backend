@@ -21,7 +21,9 @@ from campaign.views import index
 
 urlpatterns = [
     path('', index, name='Home'),
+    path('pages/', include('django.contrib.flatpages.urls')),
     path('admin/', admin.site.urls),
+
     path('api/v1/', include('campaign.urls')),
     path('api/v1/', include('users.urls')),
     path('api/v1/', include('newsletter.urls')),

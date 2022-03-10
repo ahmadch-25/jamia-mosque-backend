@@ -45,12 +45,17 @@ INSTALLED_APPS = [
     'newsletter',
     'users',
     'duas',
+    'sidebars',
+
+
 
 ]
 
-INSTALLED_APPS += ('django_summernote', 'rest_framework', 'rest_framework_api_key', 'fcm_django', 'import_export')
+INSTALLED_APPS += ('django_summernote', 'rest_framework', 'rest_framework_api_key', 'fcm_django', 'import_export',  'django.contrib.sites',
+    'django.contrib.flatpages',)
 
 UNICODE_JSON = False
+SITE_ID = 1
 
 FCM_DJANGO_SETTINGS = {
      # default: _('FCM Django')
