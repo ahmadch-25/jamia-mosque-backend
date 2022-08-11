@@ -24,7 +24,7 @@ class DonationItems(models.Model):
     end_date = models.DateTimeField(verbose_name='End Date')
     currency = models.CharField(max_length=3, choices=CURRENCY_TYPE_CHOICES, verbose_name='Currency',
                                 default=DEFAULT_CURRENCY)
-    contribution_amount = models.IntegerField(verbose_name='Contribution Amount', null=True, blank=True)
+    contribution_amount = models.IntegerField(verbose_name='Contribution Amount', null=True, blank=True, default=0)
     publish = models.BooleanField()
 
     def __str__(self):

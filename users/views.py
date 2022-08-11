@@ -1,5 +1,10 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site
+from django.http import HttpResponse
 from django.shortcuts import render
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework.generics import UpdateAPIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,6 +14,8 @@ from rest_framework.views import APIView
 from .serializers import UserSerializer, ContributionSerializer, DonationItems, CampaignSerializer
 from campaign.models import CampaignContribution
 from fcm_django.models import FCMDevice
+from mails import accountVarificationEmail,resetPasswordEmail
+from .tokens import account_activation_token
 
 
 class UserRegister(APIView):
@@ -25,7 +32,13 @@ class UserRegister(APIView):
             last_name=user_data["last_name"], password=user_data["password"]
         )
         user.set_password(user_data["password"])
+        user.is_active = False
         user.save()
+        accountVarificationEmail(user.first_name+" "+user.last_name,
+                                 user.email,
+                                 urlsafe_base64_encode(force_bytes(user.pk)),
+                                 account_activation_token.make_token(user)
+                                 )
         app_user = UserInfo(user=user, phone_number=user_data["phone_number"], device_token=user_data["device_token"])
         try:
             fcm_device = FCMDevice(user=user, name=user.first_name, active=True, device_id=user_data["phone_number"],
@@ -36,7 +49,7 @@ class UserRegister(APIView):
         fcm_device.save()
         app_user.save()
         user = UserSerializer(user)
-        return Response({"message": "success", "error": False, "user": user.data}, status=status.HTTP_200_OK)
+        return Response({"message": "success, Varification Email sent!", "error": False, "user": user.data}, status=status.HTTP_200_OK)
 
 
 class UserLogin(APIView):
@@ -48,14 +61,19 @@ class UserLogin(APIView):
             return Response({"message": "User Not Found !", "error": True}, status=status.HTTP_404_NOT_FOUND)
 
         user = User.objects.get(username=user_data["email"])
-        if check_password(user_data["password"], user.password):
-            fcm_device = FCMDevice.objects.filter(user=user).first()
-            fcm_device.registration_id = user_data["device_token"]
-            fcm_device.save()
-            user = UserSerializer(user)
-            return Response({"message": "success", "error": False, "user": user.data}, status=status.HTTP_200_OK)
+        if user.is_active:
+            if check_password(user_data["password"], user.password):
+                fcm_device = FCMDevice.objects.filter(user=user).first()
+                fcm_device.registration_id = user_data["device_token"]
+                fcm_device.save()
+                user = UserSerializer(user)
+                return Response({"message": "success", "error": False, "user": user.data}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "Password Not Correct !", "error": True},
+                                status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            return Response({"message": "Account not verified please check verification email", "error": True}, status=status.HTTP_403_FORBIDDEN)
 
-        return Response({"message": "Password Not Correct !", "error": True}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ChangePasswordView(APIView):
@@ -106,3 +124,50 @@ class UserContributions(APIView):
         contributions_data = ContributionSerializer(donations, many=True)
         return Response({"message": "success", "error": False, "contributions": contributions_data.data},
                         status=status.HTTP_200_OK)
+
+
+class ResetPassword(APIView):
+
+    def post(self, request):
+        try:
+            user_data = request.data
+            user = User.objects.get(email=user_data["email"])
+
+            resetPasswordEmail(
+                user.email,
+                urlsafe_base64_encode(force_bytes(user.pk)),
+                account_activation_token.make_token(user)
+            )
+            return Response({"message": "reset password email sent", "error": False},
+                            status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"message": "User not found", "error": True},
+                            status=status.HTTP_200_OK)
+
+def activate(request, uidb64, token):
+    print(uidb64)
+    uid = urlsafe_base64_decode(uidb64).decode()
+    user = User.objects.get(pk=uid)
+    print(user)
+    if user is not None and account_activation_token.check_token(user, token):
+        user.is_active = True
+        user.save()
+        return HttpResponse('Thank you for your email confirmation. Now you can login your account.')
+    else:
+        return HttpResponse('Activation link is invalid!')
+
+
+def genrate_new_password(request, uidb64, token):
+    uid = urlsafe_base64_decode(uidb64).decode()
+    user = User.objects.get(pk=uid)
+    print(user)
+    if user is not None and account_activation_token.check_token(user, token):
+        password = User.objects.make_random_password()
+        user.set_password(password)
+        user.save()
+        res="""
+        Your password reset is successfull . you can login with the following password {}
+        """.format(password)
+        return HttpResponse('Thank you for your email confirmation. Now you can login your account.')
+    else:
+        return HttpResponse('Activation link is invalid!')

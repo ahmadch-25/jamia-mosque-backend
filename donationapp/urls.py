@@ -18,15 +18,18 @@ from django.urls import path,include
 from django.conf import settings
 from django.conf.urls.static import static
 from campaign.views import index
+from users.views import activate
 
 urlpatterns = [
     path('', index, name='Home'),
     path('pages/', include('django.contrib.flatpages.urls')),
     path('admin/', admin.site.urls),
-
+    path('activate/<uidb64>/<token>/', activate, name='activate'),
     path('api/v1/', include('campaign.urls')),
     path('api/v1/', include('users.urls')),
     path('api/v1/', include('newsletter.urls')),
     path('api/v1/', include('duas.urls')),
-    path('summernote/', include('django_summernote.urls')),
+    path('api/v1/', include('paryertiming.urls')),
+    path('api/v1/', include('sidebars.urls')),
+
 ]+static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

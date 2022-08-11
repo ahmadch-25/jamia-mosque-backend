@@ -24,10 +24,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '77)5w*g#3+nya5&y9s#if1&!af(=_t6svje)7!n#2#b65%%#pn'
+#SECRET_KEY = '77)5w*g#3+nya5&y9s#if1&!af(=_t6svje)7!n#2#b65%%#pn'
+
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '77)5w*g#3+nya5&y9s#if1&!af(=_t6svje)7!n#2#b65%%#pn')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'False'
 
 ALLOWED_HOSTS = ['0.0.0.0','127.0.0.1','54.196.224.142']
 
@@ -46,12 +48,13 @@ INSTALLED_APPS = [
     'users',
     'duas',
     'sidebars',
+    'paryertiming',
 
 
 
 ]
 
-INSTALLED_APPS += ('django_summernote', 'rest_framework', 'rest_framework_api_key', 'fcm_django', 'import_export',  'django.contrib.sites',
+INSTALLED_APPS += ( 'rest_framework', 'rest_framework_api_key', 'fcm_django', 'import_export',  'django.contrib.sites',
     'django.contrib.flatpages',)
 
 UNICODE_JSON = False
@@ -160,6 +163,9 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, 'static'),
 )
+
+
+
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 

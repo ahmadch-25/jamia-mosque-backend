@@ -9,6 +9,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+
+from mails import wellcomeEmail
+from users.models import UserInfo
+from users.serializers import UserSerializer
 from .serializer import CampaignSerializer
 from .models import DonationItems, CampaignContribution, ZakatNisab
 
@@ -56,17 +60,69 @@ class GenratePaymentUrl(APIView):
     def post(self, request):
         request_data = request.data
         service = APIService(token=token, publishable_key=publishable_key, private_key=private_key, test=True)
-        user = User.objects.filter(email=request_data["email"]).first()
-        response = service.collect.checkout(
-            phone_number=request_data["phone_number"],
-            email=request_data["email"], amount=request_data["amount"], currency="KES",
-            comment="Fees",
-            first_name=request_data["first_name"], last_name=request_data["last_name"],
-            api_ref=request_data["campaign_id"] + "_" + user.id
+        if request_data["is_login"]:
+            user = User.objects.filter(email=request_data["email"]).first()
+            response = service.collect.checkout(
+                phone_number=request_data["phone_number"],
+                email=request_data["email"],
+                amount=request_data["amount"],
+                currency="KES",
+                comment="Fees",
+                first_name=request_data["first_name"],
+                last_name=request_data["last_name"],
+                api_ref=str(request_data["campaign_id"])+"_"+str(user.id)
+            )
+        else:
+            if User.objects.filter(email=request_data["email"]).exists():
+                user = User.objects.filter(email=request_data["email"]).first()
+                response = service.collect.checkout(
+                    phone_number=request_data["phone_number"],
+                    email=request_data["email"],
+                    amount=request_data["amount"],
+                    currency="KES",
+                    comment="Fees",
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    api_ref=str(request_data["campaign_id"])+"-"+str(user.id)
+                )
+                return Response({
+                                "message": "success",
+                                 "error": False,
+                                 "url": response["url"]},
+                                status=status.HTTP_200_OK)
+            response = service.collect.checkout(
+                phone_number=request_data["phone_number"],
+                email=request_data["email"],
+                amount=request_data["amount"],
+                currency="KES",
+                comment="Fees",
+                first_name=request_data["first_name"],
+                last_name=request_data["last_name"],
+                api_ref=str(request_data["campaign_id"])
+            )
+            password = User.objects.make_random_password()
+            user = User(
+                username=request_data["email"], email=request_data["email"], first_name=request_data["first_name"],
+                last_name=request_data["last_name"], password=password
+            )
+            user.set_password(password)
+            user.save()
+            wellcomeEmail(user.email,
+                          password
+                            )
+            app_user = UserInfo(user=user, phone_number=request_data["phone_number"],
+                                device_token=request_data["device_token"])
+            try:
+                fcm_device = FCMDevice(user=user, name=user.first_name, active=True,
+                                       device_id=request_data["email"],
+                                       registration_id=request_data["device_token"], type='android')
+            except Exception as e:
+                print(e)
 
-        )
-        print(response)
-        return Response({"message": "success", "error": False, "url": response["url"]}, status=status.HTTP_200_OK)
+            fcm_device.save()
+            app_user.save()
+            user = UserSerializer(user)
+        return Response({"message": "success", "error": False, "url": response["url"], "user": user.data}, status=status.HTTP_200_OK)
 
 
 class CalculateZakat(APIView):
@@ -88,9 +144,10 @@ class ListenWebHook(APIView):
     def post(self, request):
         request_data = request.data
         if request_data["state"] == "COMPLETE":
-            api_info = request_data["api_ref"].split("_")
+            api_info = request_data["api_ref"].split("-")
+            print(api_info)
             user = User.objects.get(pk=api_info[1])
-            campaign = DonationItems.objects.get(pk=api_info[0])
+            campaign = DonationItems.objects.first()
             campaign.contribution_amount += int(float(request_data["value"]))
             campaign.save()
             donation_contributtion = CampaignContribution(user=user, campaign=campaign,
