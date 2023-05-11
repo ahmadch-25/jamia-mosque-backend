@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 from firebase_admin import messaging
-from intasend import APIService
+# from intasend import APIService
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -16,7 +16,7 @@ from users.serializers import UserSerializer
 from .serializer import CampaignSerializer
 from .models import DonationItems, CampaignContribution, ZakatNisab
 
-from intasend.utils import generate_keys
+# from intasend.utils import generate_keys
 from django.contrib.auth.models import User
 from firebase_admin.messaging import Message, Notification
 from fcm_django.models import FCMDevice
@@ -59,7 +59,7 @@ class GenratePaymentUrl(APIView):
 
     def post(self, request):
         request_data = request.data
-        service = APIService(token=token, publishable_key=publishable_key, private_key=private_key, test=True)
+        service = None#APIService(token=token, publishable_key=publishable_key, private_key=private_key, test=True)
         if request_data["is_login"]:
             user = User.objects.filter(email=request_data["email"]).first()
             response = service.collect.checkout(
